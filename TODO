@@ -1,0 +1,2 @@
+Fix GTK dependancys on make menuconfig
+Fully remove H323

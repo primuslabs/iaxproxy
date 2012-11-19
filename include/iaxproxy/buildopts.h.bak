@@ -1,0 +1,11 @@
+/*
+ * buildopts.h 
+ * Automatically generated
+ */
+
+#define LOADABLE_MODULES 1
+#define AST_MODULE_CHAN_LOCAL 1
+#define AST_MODULE_G711_NEW_ALGORITHM 1
+#define AST_MODULE_CHAN_USBRADIO 1
+#define AST_BUILDOPT_SUM "ca4e04af44821de0dad385fc033f9947"
+#define AST_BUILDOPTS "LOADABLE_MODULES"
