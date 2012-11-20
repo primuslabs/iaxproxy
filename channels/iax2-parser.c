@@ -40,7 +40,6 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision: 243945 $")
 
 #include "iax2.h"
 #include "iax2-parser.h"
-#include "iax2-provision.h"
 
 static int frames = 0;
 static int iframes = 0;
@@ -166,27 +165,6 @@ static void dump_datetime(char *output, int maxlen, void *value, int len)
 		ast_copy_string(output, "Invalid DATETIME format!", maxlen);
 }
 
-static void dump_ipaddr(char *output, int maxlen, void *value, int len)
-{
-	struct sockaddr_in sin;
-	if (len == (int)sizeof(unsigned int)) {
-		memcpy(&sin.sin_addr, value, len);
-		snprintf(output, maxlen, "%s", ast_inet_ntoa(sin.sin_addr));
-	} else
-		ast_copy_string(output, "Invalid IPADDR", maxlen);
-}
-
-
-static void dump_prov_flags(char *output, int maxlen, void *value, int len)
-{
-	char buf[256] = "";
-	if (len == (int)sizeof(unsigned int))
-		snprintf(output, maxlen, "%lu (%s)", (unsigned long)ntohl(get_unaligned_uint32(value)),
-			iax_provflags2str(buf, sizeof(buf), ntohl(get_unaligned_uint32(value))));
-	else
-		ast_copy_string(output, "Invalid INT", maxlen);
-}
-
 static void dump_samprate(char *output, int maxlen, void *value, int len)
 {
 	char tmp[256]="";
@@ -214,10 +192,9 @@ static void dump_samprate(char *output, int maxlen, void *value, int len)
 
 }
 
-static void dump_prov_ies(char *output, int maxlen, unsigned char *iedata, int len);
 static void dump_prov(char *output, int maxlen, void *value, int len)
 {
-	dump_prov_ies(output, maxlen, value, len);
+	return;
 }
 
 static struct iax2_ie {
@@ -279,26 +256,6 @@ static struct iax2_ie {
 	{ IAX_IE_OSPTOKEN, "OSPTOKEN" },
 };
 
-static struct iax2_ie prov_ies[] = {
-	{ PROV_IE_USEDHCP, "USEDHCP" },
-	{ PROV_IE_IPADDR, "IPADDR", dump_ipaddr },
-	{ PROV_IE_SUBNET, "SUBNET", dump_ipaddr },
-	{ PROV_IE_GATEWAY, "GATEWAY", dump_ipaddr },
-	{ PROV_IE_PORTNO, "BINDPORT", dump_short },
-	{ PROV_IE_USER, "USERNAME", dump_string },
-	{ PROV_IE_PASS, "PASSWORD", dump_string },
-	{ PROV_IE_LANG, "LANGUAGE", dump_string },
-	{ PROV_IE_TOS, "TYPEOFSERVICE", dump_byte },
-	{ PROV_IE_FLAGS, "FLAGS", dump_prov_flags },
-	{ PROV_IE_FORMAT, "FORMAT", dump_int },
-	{ PROV_IE_AESKEY, "AESKEY" },
-	{ PROV_IE_SERVERIP, "SERVERIP", dump_ipaddr },
-	{ PROV_IE_SERVERPORT, "SERVERPORT", dump_short },
-	{ PROV_IE_NEWAESKEY, "NEWAESKEY" },
-	{ PROV_IE_PROVVER, "PROV VERSION", dump_int },
-	{ PROV_IE_ALTSERVER, "ALTSERVERIP", dump_ipaddr },
-};
-
 const char *iax_ie2str(int ie)
 {
 	int x;
@@ -309,58 +266,6 @@ const char *iax_ie2str(int ie)
 	return "Unknown IE";
 }
 
-
-static void dump_prov_ies(char *output, int maxlen, unsigned char *iedata, int len)
-{
-	int ielen;
-	int ie;
-	int x;
-	int found;
-	char interp[80];
-	char tmp[256];
-	if (len < 2)
-		return;
-	strcpy(output, "\n"); 
-	maxlen -= strlen(output); output += strlen(output);
-	while(len > 2) {
-		ie = iedata[0];
-		ielen = iedata[1];
-		if (ielen + 2> len) {
-			snprintf(tmp, (int)sizeof(tmp), "Total Prov IE length of %d bytes exceeds remaining prov frame length of %d bytes\n", ielen + 2, len);
-			ast_copy_string(output, tmp, maxlen);
-			maxlen -= strlen(output);
-			output += strlen(output);
-			return;
-		}
-		found = 0;
-		for (x=0;x<(int)sizeof(prov_ies) / (int)sizeof(prov_ies[0]); x++) {
-			if (prov_ies[x].ie == ie) {
-				if (prov_ies[x].dump) {
-					prov_ies[x].dump(interp, (int)sizeof(interp), iedata + 2, ielen);
-					snprintf(tmp, (int)sizeof(tmp), "       %-15.15s : %s\n", prov_ies[x].name, interp);
-					ast_copy_string(output, tmp, maxlen);
-					maxlen -= strlen(output); output += strlen(output);
-				} else {
-					if (ielen)
-						snprintf(interp, (int)sizeof(interp), "%d bytes", ielen);
-					else
-						strcpy(interp, "Present");
-					snprintf(tmp, (int)sizeof(tmp), "       %-15.15s : %s\n", prov_ies[x].name, interp);
-					ast_copy_string(output, tmp, maxlen);
-					maxlen -= strlen(output); output += strlen(output);
-				}
-				found++;
-			}
-		}
-		if (!found) {
-			snprintf(tmp, (int)sizeof(tmp), "       Unknown Prov IE %03d  : Present\n", ie);
-			ast_copy_string(output, tmp, maxlen);
-			maxlen -= strlen(output); output += strlen(output);
-		}
-		iedata += (2 + ielen);
-		len -= (2 + ielen);
-	}
-}
 
 static void dump_ies(unsigned char *iedata, int len)
 {
@@ -925,15 +830,6 @@ int iax_parse_ies(struct iax_ies *ies, unsigned char *data, int datalen)
 		case IAX_IE_ENCKEY:
 			ies->enckey = data + 2;
 			ies->enckeylen = len;
-			break;
-		case IAX_IE_PROVVER:
-			if (len != (int)sizeof(unsigned int)) {
-				snprintf(tmp, (int)sizeof(tmp), "Expected provisioning version to be %d bytes long but was %d\n", (int)sizeof(unsigned int), len);
-				errorf(tmp);
-			} else {
-				ies->provverpres = 1;
-				ies->provver = ntohl(get_unaligned_uint32(data + 2));
-			}
 			break;
 		case IAX_IE_CALLINGPRES:
 			if (len == 1)

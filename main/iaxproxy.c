@@ -1172,10 +1172,6 @@ static pthread_t lthread;
  */
 static int read_credentials(int fd, char *buffer, size_t size, struct console *con)
 {
-#if defined(SO_PEERCRED)
-	struct ucred cred;
-	socklen_t len = sizeof(cred);
-#endif
 #if defined(HAVE_GETPEEREID)
 	uid_t uid;
 	gid_t gid;

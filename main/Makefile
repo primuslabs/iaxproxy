@@ -17,12 +17,13 @@ all: iaxproxy
 
 include $(ASTTOPDIR)/Makefile.moddir_rules
 
-OBJS= geoacl.o tcptls.o io.o sched.o logger.o frame.o loader.o config.o channel.o \
+#removing geoacl for now
+OBJS= tcptls.o io.o sched.o logger.o frame.o loader.o config.o channel.o \
 	translate.o file.o pbx.o cli.o md5.o term.o heap.o \
 	ulaw.o alaw.o callerid.o fskmodem.o image.o app.o \
 	cdr.o tdd.o acl.o rtp.o udptl.o manager.o iaxproxy.o \
 	dsp.o chanvars.o indications.o autoservice.o db.o privacy.o \
-	astmm.o astfd.o enum.o srv.o dns.o aescrypt.o aestab.o aeskey.o \
+	astmm.o astfd.o enum.o srv.o dns.o \
 	utils.o plc.o jitterbuf.o dnsmgr.o devicestate.o \
 	netsock.o slinfactory.o ast_expr2.o ast_expr2f.o \
 	cryptostub.o sha1.o http.o fixedjitterbuf.o abstract_jb.o \
@@ -43,7 +44,7 @@ OBJS+=say.o
 AST_LIBS += $(OPENSSL_LIB)
 AST_LIBS += $(BKTR_LIB)
 AST_LIBS += $(LIBXML2_LIB) 
-AST_LIBS+=-L/opt/GeoIP/lib -lGeoIP
+#AST_LIBS+=-L/opt/GeoIP/lib -lGeoIP
 
 ifneq ($(findstring $(OSARCH), linux-gnu uclinux linux-uclibc linux-gnueabi ),)
   ifneq ($(findstring LOADABLE_MODULES,$(MENUSELECT_CFLAGS)),)
