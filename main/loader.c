@@ -75,7 +75,7 @@ static unsigned char expected_key[] =
 { 0x87, 0x76, 0x79, 0x35, 0x23, 0xea, 0x3a, 0xd3,
   0x25, 0x2a, 0xbb, 0x35, 0x87, 0xe4, 0x22, 0x24 };
 
-static char buildopt_sum[33] = AST_BUILDOPT_SUM;
+//static char buildopt_sum[33] = AST_BUILDOPT_SUM;
 
 static unsigned int embedding = 1; /* we always start out by registering embedded modules,
 				      since they are here before we dlopen() any

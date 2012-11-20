@@ -70,7 +70,8 @@ dist-clean::
 
 chan_proxy.so: ASTCFLAGS+=-I/usr/local/include/hiredis
 
-$(if $(filter chan_proxy,$(EMBEDDED_MODS)),modules.link,chan_proxy.so): iax2-parser.o iax2-provision.o
+$(if $(filter chan_proxy,$(EMBEDDED_MODS)),modules.link,chan_proxy.so): iax2-parser.o 
+#iax2-provision.o
 
 ifneq ($(filter chan_h323,$(EMBEDDED_MODS)),)
 modules.link: h323/libchanh323.a

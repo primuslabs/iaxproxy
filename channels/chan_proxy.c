@@ -118,7 +118,6 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision: 324634 $")
 
 #include "iax2.h"
 #include "iax2-parser.h"
-#include "iax2-provision.h"
 #include "jitterbuf.h"
 
 /* Start def's from chan_sip */
@@ -3431,7 +3430,6 @@ static int iax2_fixup(struct ast_channel *oldchannel, struct ast_channel *newcha
 static int iax2_hangup(struct ast_channel *c);
 static int iax2_indicate(struct ast_channel *c, int condition, const void *data, size_t datalen);
 static int iax2_poke_peer(struct iax2_peer *peer, int heldcall);
-static int iax2_provision(struct sockaddr_in *end, int sockfd, char *dest, const char *template, int force);
 static int iax2_send(struct chan_iax2_pvt *pvt, struct ast_frame *f, unsigned int ts, int seqno, int now, int transfer, int final);
 static int iax2_sendhtml(struct ast_channel *c, int subclass, const char *data, int datalen);
 static int iax2_sendimage(struct ast_channel *c, struct ast_frame *img);
@@ -11183,22 +11181,6 @@ static int iax_park(struct ast_channel *chan1, struct ast_channel *chan2)
 	return -1;
 }
 
-
-static int iax2_provision(struct sockaddr_in *end, int sockfd, char *dest, const char *template, int force);
-
-static int check_provisioning(struct sockaddr_in *sin, int sockfd, char *si, unsigned int ver)
-{
-	unsigned int ourver;
-	char rsi[80];
-	snprintf(rsi, sizeof(rsi), "si-%s", si);
-	if (iax_provision_version(&ourver, rsi, 1))
-		return 0;
-	ast_debug(1, "Service identifier '%s', we think '%08x', they think '%08x'\n", si, ourver, ver);
-	if (ourver != ver) 
-		iax2_provision(sin, sockfd, NULL, rsi, 1);
-	return 0;
-}
-
 static void construct_rr(struct chan_iax2_pvt *pvt, struct iax_ie_data *iep) 
 {
 	jb_info stats;
@@ -12264,7 +12246,6 @@ static int socket_process(struct iax2_thread *thread)
 					break;
 				if (ies.provverpres && ies.serviceident && sin.sin_addr.s_addr) {
 					ast_mutex_unlock(&iaxsl[fr->callno]);
-					check_provisioning(&sin, fd, ies.serviceident, ies.provver);
 					ast_mutex_lock(&iaxsl[fr->callno]);
 					if (!iaxs[fr->callno]) {
 						break;
@@ -13013,7 +12994,6 @@ immediatedial:
 					}
 					if (ies.provverpres && ies.serviceident && sin.sin_addr.s_addr) {
 						ast_mutex_unlock(&iaxsl[fr->callno]);
-						check_provisioning(&sin, fd, ies.serviceident, ies.provver);
 						ast_mutex_lock(&iaxsl[fr->callno]);
 					}
 					break;
@@ -13516,86 +13496,8 @@ static int iax2_do_register(struct iax2_registry *reg)
 	return 0;
 }
 
-static int iax2_provision(struct sockaddr_in *end, int sockfd, char *dest, const char *template, int force)
-{
-	/* Returns 1 if provisioned, -1 if not able to find destination, or 0 if no provisioning
-	   is found for template */
-	struct iax_ie_data provdata;
-	struct iax_ie_data ied;
-	unsigned int sig;
-	struct sockaddr_in sin;
-	int callno;
-	struct create_addr_info cai;
 
-	memset(&cai, 0, sizeof(cai));
 
-	ast_debug(1, "Provisioning '%s' from template '%s'\n", dest, template);
-
-	if (iax_provision_build(&provdata, &sig, template, force)) {
-		ast_debug(1, "No provisioning found for template '%s'\n", template);
-		return 0;
-	}
-
-	if (end) {
-		memcpy(&sin, end, sizeof(sin));
-		cai.sockfd = sockfd;
-	} else if (create_addr(dest, NULL, &sin, &cai))
-		return -1;
-
-	/* Build the rest of the message */
-	memset(&ied, 0, sizeof(ied));
-	iax_ie_append_raw(&ied, IAX_IE_PROVISIONING, provdata.buf, provdata.pos);
-
-	callno = find_callno_locked(0, 0, &sin, NEW_FORCE, cai.sockfd, 0);
-	if (!callno)
-		return -1;
-
-	if (iaxs[callno]) {
-		/* Schedule autodestruct in case they don't ever give us anything back */
-		iaxs[callno]->autoid = iax2_sched_replace(iaxs[callno]->autoid, 
-			sched, 15000, auto_hangup, (void *)(long)callno);
-		ast_set_flag(iaxs[callno], IAX_PROVISION);
-		/* Got a call number now, so go ahead and send the provisioning information */
-		send_command(iaxs[callno], AST_FRAME_IAX, IAX_COMMAND_PROVISION, 0, ied.buf, ied.pos, -1);
-	}
-	ast_mutex_unlock(&iaxsl[callno]);
-
-	return 1;
-}
-
-static char *papp = "IAX2Provision";
-
-/*! iax2provision
-\ingroup applications
-*/
-static int iax2_prov_app(struct ast_channel *chan, void *data)
-{
-	int res;
-	char *sdata;
-	char *opts;
-	int force =0;
-	unsigned short callno = PTR_TO_CALLNO(chan->tech_pvt);
-	if (ast_strlen_zero(data))
-		data = "default";
-	sdata = ast_strdupa(data);
-	opts = strchr(sdata, '|');
-	if (opts)
-		*opts='\0';
-
-	if (chan->tech != &iax2_tech) {
-		ast_log(LOG_NOTICE, "Can't provision a non-IAX device!\n");
-		return -1;
-	} 
-	if (!callno || !iaxs[callno] || !iaxs[callno]->addr.sin_addr.s_addr) {
-		ast_log(LOG_NOTICE, "Can't provision something with no IP?\n");
-		return -1;
-	}
-	res = iax2_provision(&iaxs[callno]->addr, iaxs[callno]->sockfd, NULL, sdata, force);
-	ast_verb(3, "Provisioned IAXY at '%s' with '%s'= %d\n",
-		ast_inet_ntoa(iaxs[callno]->addr.sin_addr),
-		sdata, res);
-	return res;
-}
 
 static void __iax2_poke_noanswer(const void *data)
 {
@@ -15387,8 +15289,6 @@ static int reload_config(void)
 		poke_all_peers();
 	}
 	
-	//reload_firmware(0);
-	//iax_provision_reload(1);
 	ast_unload_realtime("iaxpeers");
 
 	return 0;
@@ -16156,7 +16056,6 @@ static int __unload_module(void)
 	ast_manager_unregister("IAXpeerlist");
 	ast_manager_unregister("IAXnetstats");
 	ast_manager_unregister("IAXregistry");
-	ast_unregister_application(papp);
 	ast_cli_unregister_multiple(cli_iax2, ARRAY_LEN(cli_iax2));
 	ast_unregister_switch(&iax2_switch);
 	ast_channel_unregister(&iax2_tech);
@@ -16183,7 +16082,6 @@ static int __unload_module(void)
 	ast_netsock_release(outsock);
 
 	delete_users();
-	iax_provision_unload();
 
 	for (x = 0; x < ARRAY_LEN(iaxsl); x++) {
 		ast_mutex_destroy(&iaxsl[x]);
@@ -16397,7 +16295,6 @@ static int load_iax_module(void)
 		return AST_MODULE_LOAD_DECLINE;
 	}
 	ast_cli_register_multiple(cli_iax2, ARRAY_LEN(cli_iax2));
-	ast_register_application_xml(papp, iax2_prov_app);
 
 	ast_custom_function_register(&iaxpeer_function);
 	ast_custom_function_register(&iaxvar_function);

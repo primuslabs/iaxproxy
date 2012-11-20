@@ -33,42 +33,9 @@ res_config_ldap.o: _ASTCFLAGS+=-DLDAP_DEPRECATED
 
 res_config_redis.o: ASTCFLAGS+=-I/usr/local/include/hiredis
 
-ael/ael_lex.o: ael/ael_lex.c ../include/asterisk/ael_structs.h ael/ael.tab.h
-ael/ael_lex.o: _ASTCFLAGS+=-I. -Iael -Wno-unused
-
-ael/ael.tab.o: ael/ael.tab.c ael/ael.tab.h ../include/asterisk/ael_structs.h
-ael/ael.tab.o: _ASTCFLAGS+=-I. -Iael -DYYENABLE_NLS=0
-
-ais/clm.o ais/evt.o: _ASTCFLAGS+=${AIS_INCLUDE}
-
 $(if $(filter res_ais,$(EMBEDDED_MODS)),modules.link,res_ais.so): ais/clm.o ais/evt.o
 
 $(if $(filter res_snmp,$(EMBEDDED_MODS)),modules.link,res_snmp.so): snmp/agent.o
 
-$(if $(filter res_ael_share,$(EMBEDDED_MODS)),modules.link,res_ael_share.so): ael/ael_lex.o ael/ael.tab.o ael/pval.o
-
-ifneq ($(findstring REBUILD_PARSERS,$(MENUSELECT_CFLAGS)),)
-ael/ael_lex.c: ael/ael.flex
-else
-ael/ael_lex.c:
-endif
-	$(ECHO_PREFIX) echo "   [FLEX] $< -> $@"
-	$(CMD_PREFIX) (cd ael; $(FLEX) ael.flex)
-	$(CMD_PREFIX) sed 's@#if __STDC_VERSION__ >= 199901L@#if !defined __STDC_VERSION__ || __STDC_VERSION__ >= 199901L@' $@ > $@.fix
-	$(CMD_PREFIX) echo "#include \"asterisk.h\"" > $@
-	$(CMD_PREFIX) echo >> $@
-	$(CMD_PREFIX) cat $@.fix >> $@
-	$(CMD_PREFIX) rm $@.fix
-
-ifneq ($(findstring REBUILD_PARSERS,$(MENUSELECT_CFLAGS)),)
-ael/ael.tab.c ael/ael.tab.h: ael/ael.y
-else
-ael/ael.tab.c ael/ael.tab.h:
-endif
-	$(ECHO_PREFIX) echo "   [BISON] $< -> $@"
-	$(CMD_PREFIX) (cd ael; $(BISON) -v -d ael.y)
-
-ael/pval.o: ael/pval.c
-
 clean::
-	rm -f snmp/*.o snmp/*.i ael/*.o ael/*.i ais/*.o ais/*.i
+	rm -f snmp/*.o snmp/*.i
