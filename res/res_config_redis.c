@@ -86,14 +86,13 @@ struct tables {
 	char name[0];
 };
 
-static AST_LIST_HEAD_STATIC(mysql_tables, tables);
-static AST_RWLIST_HEAD_STATIC(databases, mysql_conn);
+//static AST_LIST_HEAD_STATIC(mysql_tables, tables);
+//static AST_RWLIST_HEAD_STATIC(databases, mysql_conn);
 
 static int parse_config(int reload);
-static int redis_reconnect(struct redis_conn *conn);
+//static int redis_reconnect(struct redis_conn *conn);
 static char *handle_cli_realtime_redis_status(struct ast_cli_entry *e, int cmd, struct ast_cli_args *a);
-static int load_redis_config(struct ast_config *config, const char *category, struct redis_conn *conn);
-static int require_redis(const char *database, const char *tablename, va_list ap);
+//static int require_redis(const char *database, const char *tablename, va_list ap);
 
 
 static struct ast_cli_entry cli_realtime_redis_status[] = {
@@ -110,12 +109,10 @@ static struct ast_variable *realtime_redis(const char *database, const char *tab
 	struct redisContext *c;
 	redisReply *reply;
 	redisReply *reply2;
-	int numFields, i, valsz;
-	struct ast_str *sql = ast_str_thread_get(&sql_buf, 16);
+	int i, valsz;
 	struct ast_str *buf = ast_str_thread_get(&scratch_buf, 16);
 	char *stringp;
 	char *chunk;
-	char *op;
 	const char *newparam, *newval;
 	struct ast_variable *var=NULL, *prev=NULL;
 
@@ -199,9 +196,8 @@ static struct ast_config *realtime_multi_redis(const char *database, const char 
 {
 	struct redisContext *c;
         redisReply *reply;
-        redisReply *reply2;
 	struct ast_str *buf = ast_str_thread_get(&scratch_buf, 16);	
-	int numFields, i, valsz;
+	int i, valsz;
 	const char *initfield = NULL;
 	char *stringp;
 	char *chunk;
@@ -219,7 +215,7 @@ static struct ast_config *realtime_multi_redis(const char *database, const char 
 		ast_log(LOG_WARNING, "MySQL RealTime: Realtime retrieval requires at least 1 parameter and 1 value to search on.\n");
 		ast_config_destroy(cfg);
 		return NULL;
-}
+	}
 
 	initfield = ast_strdupa(newparam);
 	if (initfield && (op = strchr(initfield, ' '))) {
@@ -281,6 +277,7 @@ static struct ast_config *realtime_multi_redis(const char *database, const char 
                 	return NULL;
 		}
                 for (i=0; i < reply->elements; i++) {
+			redisReply *reply2;
 			reply2= redisCommand(c,"HGET %s:%s %s", table, ast_str_buffer(buf), reply->element[i]->str);
 			ast_debug(2, "Redis Realtime attribute_name: %s value: %s\n", reply->element[i]->str, reply2->str);
 			if (ast_strlen_zero(reply2->str)) {
@@ -296,9 +293,9 @@ static struct ast_config *realtime_multi_redis(const char *database, const char 
 				}
 			ast_category_append(cfg, cat);
 			}
+			freeReplyObject(reply2);
 		}
 		freeReplyObject(reply);
-		freeReplyObject(reply2);
 	} else {
 		ast_debug(1, "Redis RealTime2: Could not find any rows in table %s.\n", table);
 		freeReplyObject(reply);
@@ -306,13 +303,13 @@ static struct ast_config *realtime_multi_redis(const char *database, const char 
 	redisFree(c);
 	return cfg;
 }
-
+/*
 static int update_redis(const char *database, const char *tablename, const char *keyfield, const char *lookup, va_list ap)
 {
 	ast_log(LOG_DEBUG,"update redis called but not supported yet - returning");
 	return 1;
 }
-
+*/
 
 static struct ast_config *config_redis(const char *database, const char *table, const char *file, struct ast_config *cfg, struct ast_flags config_flags, const char *unused, const char *who_asked)
 {
@@ -335,18 +332,16 @@ static struct ast_config *config_redis(const char *database, const char *table, 
 	} else {                                                                                             \
 		res = -1;                                                                                        \
 	}
-
+/* Todo
 static int unload_redis(void) {
-        /* To do */
         return 0;
 }
-
+*/
 static struct ast_config_engine redis_engine = {
 	.name = "redis",
 	.load_func = config_redis,
 	.realtime_func = realtime_redis,
 	.realtime_multi_func = realtime_multi_redis,
-	.unload_func = unload_redis,
 };
 
 static int load_module(void)
@@ -362,8 +357,6 @@ static int load_module(void)
 
 static int unload_module(void)
 {
-	struct mysql_conn *cur;
-	struct tables *table;
 
 	ast_cli_unregister_multiple(cli_realtime_redis_status, sizeof(cli_realtime_redis_status) / sizeof(struct ast_cli_entry));
 	ast_config_engine_deregister(&redis_engine);
@@ -394,8 +387,6 @@ static int parse_config(int reload)
 {
 	struct ast_config *config = NULL;
 	struct ast_flags config_flags = { reload ? CONFIG_FLAG_FILEUNCHANGED : 0 };
-	const char *catg;
-	struct mysql_conn *cur;
 
 	if ((config = ast_config_load(RES_CONFIG_REDIS_CONF, config_flags)) == CONFIG_STATUS_FILEMISSING) {
 		return 0;
@@ -408,21 +399,9 @@ static int parse_config(int reload)
 	return 0;
 }
 
-static int load_mysql_config(struct ast_config *config, const char *category, struct mysql_conn *conn)
-{
-	const char *s;
-
-	return 1;
-}
-
 
 static char *handle_cli_realtime_redis_status(struct ast_cli_entry *e, int cmd, struct ast_cli_args *a)
 {
-	char status[256], status2[100] = "", type[20];
-	char *ret = NULL;
-	int ctime = 0, found = 0;
-	struct mysql_conn *cur;
-	int l, which;
 
 	switch (cmd) {
 	case CLI_INIT:
@@ -434,6 +413,7 @@ static char *handle_cli_realtime_redis_status(struct ast_cli_entry *e, int cmd, 
 	case CLI_GENERATE:
 		return CLI_SUCCESS;
 	}
+	return NULL;
 }
 
 AST_MODULE_INFO(ASTERISK_GPL_KEY, AST_MODFLAG_DEFAULT, "Redis RealTime Configuration Driver",

@@ -14056,6 +14056,7 @@ static void user_destructor(void *obj)
 }
 
 
+/* TODO: Move this into a function for the lookups */
 /*! \brief Create user structure based on configuration */
 static struct iax2_user *build_user_redis(const char *name)
 {
