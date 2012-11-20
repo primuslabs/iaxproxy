@@ -13,8 +13,8 @@ cat << END
 #define DEFAULT_LOG_DIR    "${INSTALL_PATH}${ASTLOGDIR}"
 
 #define DEFAULT_RUN_DIR    "${INSTALL_PATH}${ASTVARRUNDIR}"
-#define DEFAULT_SOCKET     "${INSTALL_PATH}${ASTVARRUNDIR}/asterisk.ctl"
-#define DEFAULT_PID        "${INSTALL_PATH}${ASTVARRUNDIR}/asterisk.pid"
+#define DEFAULT_SOCKET     "${INSTALL_PATH}${ASTVARRUNDIR}/iaxproxy.ctl"
+#define DEFAULT_PID        "${INSTALL_PATH}${ASTVARRUNDIR}/iaxproxy.pid"
 
 #define DEFAULT_VAR_DIR    "${INSTALL_PATH}${ASTVARLIBDIR}"
 #define DEFAULT_DB         "${INSTALL_PATH}${ASTDBDIR}/astdb"

@@ -146,7 +146,7 @@ AH_TOP(
 #ifndef ASTERISK_AUTOCONFIG_H
 #define ASTERISK_AUTOCONFIG_H
 
-#include "asterisk/buildopts.h"
+#include "iaxproxy/buildopts.h"
 
 )
 

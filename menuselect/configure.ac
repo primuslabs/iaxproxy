@@ -6,7 +6,7 @@ m4_define([MENUSELECT_VERSION],
           m4_bpatsubst(m4_esyscmd([./make_version .]),
                        [\([0-9.]*\)\(\w\|\W\)*],
                        [\1]))
-AC_INIT(menuselect, MENUSELECT_VERSION, www.asterisk.org)
+AC_INIT(menuselect, MENUSELECT_VERSION, www.iaxproxy.org)
 
 # check existence of the package
 AC_CONFIG_SRCDIR([menuselect.c])

@@ -2335,7 +2335,7 @@ CONFIG_LDFLAGS="${LDFLAGS}"
 
 
 # specify output header file
-ac_config_headers="$ac_config_headers include/asterisk/autoconfig.h"
+ac_config_headers="$ac_config_headers include/iaxproxy/autoconfig.h"
 
 
 
@@ -8946,28 +8946,8 @@ fi
 
     OPENH323_DESCRIP="OpenH323"
     OPENH323_OPTION="h323"
-    PBX_OPENH323=0
+    PBX_OPENH323=-1
 
-# Check whether --with-h323 was given.
-if test "${with_h323+set}" = set; then
-  withval=$with_h323;
-	case ${withval} in
-	n|no)
-	USE_OPENH323=no
-	# -1 is a magic value used by menuselect to know that the package
-	# was disabled, other than 'not found'
-	PBX_OPENH323=-1
-	;;
-	y|ye|yes)
-	ac_mandatory_list="${ac_mandatory_list} OPENH323"
-	;;
-	*)
-	OPENH323_DIR="${withval}"
-	ac_mandatory_list="${ac_mandatory_list} OPENH323"
-	;;
-	esac
-
-fi
 
 
 
@@ -45914,35 +45894,6 @@ else
 	touch makeopts.acbak
 fi
 
-ac_config_files="$ac_config_files build_tools/menuselect-deps makeopts channels/h323/Makefile"
-
-
-	{ echo "$as_me:$LINENO: checking for mandatory modules: ${ac_mandatory_list}" >&5
-echo $ECHO_N "checking for mandatory modules: ${ac_mandatory_list}... $ECHO_C" >&6; }
-	err=0;
-	for i in ${ac_mandatory_list}; do
-		eval "a=\${PBX_$i}"
-		if test "x${a}" = "x1" ; then continue; fi
-		if test ${err} = "0" ; then { echo "$as_me:$LINENO: result: fail" >&5
-echo "${ECHO_T}fail" >&6; } ; fi
-		{ echo "$as_me:$LINENO: result: " >&5
-echo "${ECHO_T}" >&6; }
-		eval "a=\${${i}_OPTION}"
-		{ echo "$as_me:$LINENO: ***" >&5
-echo "$as_me: ***" >&6;}
-		{ echo "$as_me:$LINENO: *** The $i installation appears to be missing or broken." >&5
-echo "$as_me: *** The $i installation appears to be missing or broken." >&6;}
-		{ echo "$as_me:$LINENO: *** Either correct the installation, or run configure" >&5
-echo "$as_me: *** Either correct the installation, or run configure" >&6;}
-		{ echo "$as_me:$LINENO: *** including --without-${a}." >&5
-echo "$as_me: *** including --without-${a}." >&6;}
-		err=1
-	done
-	if test $err = 1 ; then exit 1; fi
-	{ echo "$as_me:$LINENO: result: ok" >&5
-echo "${ECHO_T}ok" >&6; }
-
-
 if test -f build_tools/menuselect-deps; then
     # extract old values of all PBX_ variables from menuselect-deps
     # and preserve them so that menuselect can determine whether
@@ -46506,10 +46457,9 @@ cat >>$CONFIG_STATUS <<\_ACEOF
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
-    "include/asterisk/autoconfig.h") CONFIG_HEADERS="$CONFIG_HEADERS include/asterisk/autoconfig.h" ;;
+    "include/iaxproxy/autoconfig.h") CONFIG_HEADERS="$CONFIG_HEADERS include/iaxproxy/autoconfig.h" ;;
     "build_tools/menuselect-deps") CONFIG_FILES="$CONFIG_FILES build_tools/menuselect-deps" ;;
     "makeopts") CONFIG_FILES="$CONFIG_FILES makeopts" ;;
-    "channels/h323/Makefile") CONFIG_FILES="$CONFIG_FILES channels/h323/Makefile" ;;
 
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}

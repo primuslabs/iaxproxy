@@ -129,7 +129,7 @@ DEBUG=-g3
 ifeq ($(OSARCH),SunOS)
   ASTETCDIR=/var/etc/iaxproxy
   ASTLIBDIR=/opt/iaxproxy/lib
-  ASTVARLIBDIR=/var/opt/asterisk
+  ASTVARLIBDIR=/var/opt/iaxproxy
   ASTDBDIR=$(ASTVARLIBDIR)
   ASTKEYDIR=$(ASTVARLIBDIR)
   ASTSPOOLDIR=/var/spool/iaxproxy
@@ -602,7 +602,7 @@ install: badshell datafiles bininstall
 	@echo " +                                           +"
 	@echo " +-----------------  or ---------------------+"
 	@echo " +                                           +"
-	@echo " + You can go ahead and install the asterisk +"
+	@echo " + You can go ahead and install the iaxproxy +"
 	@echo " + program documentation now or later run:   +"
 	@echo " +                                           +"
 	@echo " +              $(mK) progdocs               +"

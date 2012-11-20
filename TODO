@@ -1,2 +1,2 @@
+Fix build after a make distclean
 Fix GTK dependancys on make menuconfig
-Fully remove H323

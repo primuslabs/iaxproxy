@@ -1,7 +1,0 @@
-/*
- * version.h 
- * Automatically generated
- */
-#define ASTERISK_VERSION "0.1.0.3"
-#define ASTERISK_VERSION_NUM 00100
-
