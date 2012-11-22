@@ -2,7 +2,7 @@
 
 #include "iaxproxy/ast_version.h"
 
-static const char asterisk_version[] = "0.2.0.0";
+static const char asterisk_version[] = "0.2.1.3";
 
 static const char iaxproxy_release_name[] = "Blue Moon";
 
