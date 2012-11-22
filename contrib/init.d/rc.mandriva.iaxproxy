@@ -1,18 +1,18 @@
 #!/bin/sh
 # 
-# asterisk:		Starts the asterisk service
+# iaxproxy:		Starts the asterisk service
 # 
-# Version:		@(#) /etc/rc.d/init.d/asterisk 1.0
+# Version:		@(#) /etc/rc.d/init.d/iaxproxy 1.0
 # 
 # chkconfig: 2345 95 10
-# description:	Starts the asterisk service
+# description:	Starts the iaxproxy service
 # 
-# processname:	asterisk
+# processname:	iaxproxy
 # 
 
-# $Id: rc.mandriva.asterisk 150930 2008-10-18 09:02:36Z mvanbaak $
+# $Id: rc.mandriva.iaxproxy 150930 2008-10-18 09:02:36Z mvanbaak $
 
-TTY=9			# TTY (if you want one) for Asterisk to run on
+TTY=9			# TTY (if you want one) for IAXProxy to run on
 CONSOLE=yes		# Whether or not you want a console
 NOTIFY=root		# Who to notify about crashes
 DUMPDROP=/tmp
@@ -28,7 +28,7 @@ fi
 
 # Setup environment
 cd /usr/src
-if [ -f /usr/lib/asterisk/modules/chan_h323.so -a `grep -c ^noload=chan_h323.so /etc/asterisk/modules.conf` -eq 0 ]; then
+if [ -f /usr/lib/iaxproxy/modules/chan_h323.so -a `grep -c ^noload=chan_h323.so /etc/asterisk/modules.conf` -eq 0 ]; then
 	OPENH323DIR=/usr/src/h323/openh323
 	PWLIBDIR=/usr/src/h323/pwlib
 else
@@ -36,7 +36,7 @@ else
 	PWLIBDIR=/usr/src/oh323/pwlib
 fi
 
-# Put overrides in /etc/sysconfig/asterisk
+# Put overrides in /etc/sysconfig/iaxproxy
 [ -f $CONFIGFILE ] && . $CONFIGFILE
 
 LD_LIBRARY_PATH=$OPENH323DIR/lib:$PWLIBDIR/lib
@@ -69,70 +69,70 @@ if [ ! -w ${DUMPDROP} ]; then
 fi
 
 #
-# Let Asterisk dump core
+# Let IAXProxy dump core
 #
 ulimit -c unlimited
 
-#launch_asterisk()
+#launch_iaxproxy()
 #{
 #}
 
 SIGMSG=("None", "Hangup" "Interrupt" "Quit" "Illegal instruction" "Trace trap" "IOT Trap" "Bus Error" "Floating-point exception" "Killed" "User-defined signal 1" "Segmentation violation" "User-defined signal 2" "Broken pipe" "Alarm clock" "Termination" "Stack fault")
 
-run_asterisk()
+run_iaxproxy()
 {
 	while :; do 
 
 		if [ "$TTY" != "" ]; then
 			cd /tmp
 			stty sane < /dev/${TTY}
-			asterisk ${ASTARGS} > /dev/${TTY} 2>&1 < /dev/${TTY}
+			iaxproxy ${ASTARGS} > /dev/${TTY} 2>&1 < /dev/${TTY}
 		else
 			cd /tmp
-			asterisk ${ASTARGS}
+			iaxproxy ${ASTARGS}
 		fi
 		EXITSTATUS=$?
-		echo "Asterisk ended with exit status $EXITSTATUS"
+		echo "IAXProxy ended with exit status $EXITSTATUS"
 		if [ "$EXITSTATUS" = "0" ]; then
 			# Properly shutdown....
-			echo "Asterisk shutdown normally."
+			echo "IAXProxy shutdown normally."
 			exit 0
 		elif [ $EXITSTATUS -gt 128 ]; then
 			EXITSIGNAL=$(($EXITSTATUS - 128))
 			EXITMSG=${SIGMSG[$EXITSIGNAL]}
-			echo "Asterisk exited on signal $EXITSIGNAL - $EXITMSG."
+			echo "IAXProxy exited on signal $EXITSIGNAL - $EXITMSG."
 			if [ "$NOTIFY" != "" ]; then
-				echo "Asterisk exited on signal $EXITSIGNAL - $EXITMSG.  Might want to take a peek." | \
-				mail -s "Asterisk Died ($HOSTNAME)" $NOTIFY
+				echo "IAXProxy exited on signal $EXITSIGNAL - $EXITMSG.  Might want to take a peek." | \
+				mail -s "IAXProxy Died ($HOSTNAME)" $NOTIFY
 			fi
 			if [ -f /tmp/core ]; then
 				mv /tmp/core ${DUMPDROP}/core.`hostname`-`date -Iseconds` &
 			fi
 		else
-			echo "Asterisk died with code $EXITSTATUS.  Aborting."
+			echo "IAXProxy died with code $EXITSTATUS.  Aborting."
 			if [ -f /tmp/core ]; then
 				mv /tmp/core ${DUMPDROP}/core.`hostname`-`date -Iseconds` &
 			fi
 			exit 0
 		fi
-		echo "Automatically restarting Asterisk."
+		echo "Automatically restarting IAXProxy."
 	done
 }
 
 case "$1" in
 	start)
-		# Check if Asterisk is already running.  If it is, then bug out, because
-		# starting Asterisk when Asterisk is already running is very bad.
-		VERSION=`${ASTSBINDIR}/asterisk -rx 'core show version'`
-		if [ "`echo $VERSION | cut -c 1-8`" = "Asterisk" ]; then
-			echo "Asterisk is already running.  $0 will exit now."
+		# Check if IAXProxy is already running.  If it is, then bug out, because
+		# starting IAXProxy when Asterisk is already running is very bad.
+		VERSION=`${ASTSBINDIR}/iaxproxy -rx 'core show version'`
+		if [ "`echo $VERSION | cut -c 1-8`" = "IAXProxy" ]; then
+			echo "IAXProxy is already running.  $0 will exit now."
 			exit 1
 		fi
 
-		gprintf "Starting asterisk: "
-		run_asterisk >/dev/null 2>&1 &
+		gprintf "Starting iaxproxy: "
+		run_iaxproxy >/dev/null 2>&1 &
 		sleep 2	# Give it time to die
-		succeeded=`pidof asterisk|awk '{print NF}'`
+		succeeded=`pidof iaxproxy|awk '{print NF}'`
 		if [ $succeeded = "0" ]; then
 			failure
 		else
@@ -141,8 +141,8 @@ case "$1" in
 		echo
 		;;
 	stop)
-		gprintf "Stopping asterisk: "
-		asterisk -r -x "core stop gracefully" >/dev/null 2>&1
+		gprintf "Stopping iaxproxy: "
+		iaxproxy -r -x "core stop gracefully" >/dev/null 2>&1
 		killall -9 mpg123 2>/dev/null
 		success
 		echo
@@ -153,14 +153,14 @@ case "$1" in
 		$0 start
 		;;
 	reload)
-		gprintf "Reloading asterisk: "
-		asterisk -r -x "module reload" >/dev/null 2>&1
+		gprintf "Reloading iaxproxy: "
+		iaxproxy -r -x "module reload" >/dev/null 2>&1
 		success
 		echo
 		;;
 	stopnow)
-		gprintf "Stopping asterisk: "
-		asterisk -r -x "core stop now" >/dev/null 2>&1
+		gprintf "Stopping iaxproxy: "
+		iaxproxy -r -x "core stop now" >/dev/null 2>&1
 		success
 		echo
 		;;
@@ -179,11 +179,11 @@ case "$1" in
 		$0 start
 		;;
 	status)
-		succeeded=`pidof asterisk|awk '{print NF}'`
+		succeeded=`pidof iaxproxy|awk '{print NF}'`
 		if [ $succeeded = "0" ]; then
-			echo "Asterisk is not running"
+			echo "IAXProxy is not running"
 		else
-			echo "Asterisk is currently running with $succeeded threads"
+			echo "IAXProxy is currently running with $succeeded threads"
 		fi
 		;;
 	*)

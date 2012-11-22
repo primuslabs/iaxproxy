@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: rc.redhat.asterisk 268535 2010-06-06 05:31:11Z tilghman $
+# $Id: rc.redhat.iaxproxy 268535 2010-06-06 05:31:11Z tilghman $
 #
 # iaxproxy    Starts, Stops and Reloads IAXProxy
 #
@@ -15,10 +15,10 @@
 #
 # Sun Jul 18 2004 Gregory Boehnlein <damin@nacs.net>
 # - Updated Version to 1.2
-# - Added test for safe_asterisk
+# - Added test for safe_iaxproxy
 # - Verified SIGTERM issued by "killproc" ensures "stop gracefully"
 # - Added support for -U and -G command line options
-# - Modified "reload" to call asterisk -rx 'reload' 
+# - Modified "reload" to call iaxproxy -rx 'reload' 
 
 # Use this option to specify a different configuration directory
 #AST_CONFIG=__ASTERISK_ETC_DIR__
@@ -27,12 +27,12 @@
 AST_SBIN=__ASTERISK_SBIN_DIR__
 
 # Uncomment the following and set them to the user/groups that you
-# want to run Asterisk as. NOTE: this requires substantial work to
-# be sure that Asterisk's environment has permission to write the
+# want to run IAXProxy as. NOTE: this requires substantial work to
+# be sure that IAXProxy's environment has permission to write the
 # files required  for  its  operation, including logs, its comm
-# socket, the asterisk database, etc.
-#AST_USER="asterisk"
-#AST_GROUP="asterisk"
+# socket, the iaxproxy database, etc.
+#AST_USER="iaxproxy"
+#AST_GROUP="iaxproxy"
 
 # Source function library.
 . /etc/rc.d/init.d/functions
@@ -50,13 +50,13 @@ fi
 # Uncomment this ONLY if you know what you are doing.
 # export LD_ASSUME_KERNEL=2.4.1
 
-# Full path to asterisk binary
+# Full path to iaxproxy binary
 DAEMON=$AST_SBIN/iaxproxy
 
-# Full path to safe_asterisk script
+# Full path to safe_iaxproxy script
 SAFE_ASTERISK=$AST_SBIN/safe_iaxproxy
 
-# Allow configuration overrides in /etc/sysconfig/asterisk
+# Allow configuration overrides in /etc/sysconfig/iaxproxy
 CONFIG0=`readlink $0`
 if [ "$CONFIG0" = "" ]; then
 	CONFIGFILE=/etc/sysconfig/`basename $0`
@@ -68,11 +68,11 @@ fi
 RETVAL=0
 
 start() {
-	# Check if Asterisk is already running.  If it is, then bug out, because
-	# starting safe_asterisk when Asterisk is running is very bad.
+	# Check if IAXProxy is already running.  If it is, then bug out, because
+	# starting safe_iaxproxy when IAXProxy is running is very bad.
 	VERSION=`${AST_SBIN}/iaxproxy -rx 'core show version'`
-	if [ "`echo $VERSION | cut -c 1-8`" = "Asterisk" ]; then
-		echo "Asterisk is already running."
+	if [ "`echo $VERSION | cut -c 1-8`" = "IAXProxy" ]; then
+		echo "IAXProxy is already running."
 		exit 1
 	fi
 
@@ -100,7 +100,7 @@ start() {
 stop() {
 	# Stop daemons.
 	if [ -f $SAFE_ASTERISK ]; then
-		# Kill safe_iaxproxy first, to prevent us from starting up 2 instances of safe_asterisk
+		# Kill safe_iaxproxy first, to prevent us from starting up 2 instances of safe_iaxproxy
 		echo -n $"Stopping safe_iaxproxy:"
 		killproc `basename $SAFE_ASTERISK`
 		echo

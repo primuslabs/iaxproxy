@@ -19,6 +19,10 @@ if [ $? = 0 ] ; then	# BSD case
 			MY_AC_VER=259
 			MY_AM_VER=19
 			;;
+		OpenBSD*) # OpenBSD patch, based on http://lists.digium.com/pipermail/asterisk-commits/2012-January/053106.html
+			export AUTOCONF_VERSION=2.63
+			export AUTOMAKE_VERSION=1.9
+			;;
 		*)
 			MY_AC_VER=-2.61
 			MY_AM_VER=-1.9

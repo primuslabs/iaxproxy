@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>org.asterisk.muted</string>
+	<string>org.iaxproxy.muted</string>
 	<key>Disabled</key>
 	<true/>
 	<key>UserName</key>
-	<string>asterisk</string>
+	<string>iaxproxy</string>
 	<key>GroupName</key>
-	<string>asterisk</string>
+	<string>iaxproxy</string>
 	<key>KeepAlive</key>
 	<true/>
 	<key>RunAtLoad</key>

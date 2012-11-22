@@ -1,0 +1,51 @@
+#!/bin/sh
+#
+# Start/stop/restart IAXProxy PBX
+#
+# Version: 1.0 - Paul Belanger <pabelanger@gmail.com>
+#
+# 03.29.2005 - Initial Version
+#
+# $Id: rc.slackware.iaxproxy 119302 2008-05-30 16:47:24Z mvanbaak $
+
+iaxproxy_start() {
+   if [ -x /usr/sbin/iaxproxy ]; then
+      # Check if IAXProxy is already running.  If it is, then bug out, because
+      # starting safe_iaxproxy when IAXProxy is running is very bad.
+      VERSION=`/usr/sbin/iaxproxy -rx 'core show version'`
+	  if [ "`echo $VERSION | cut -c 1-8`" = "IAXProxy" ]; then
+         echo "IAXProxy is already running.  $0 will exit now."
+         exit 1
+      fi
+
+      echo "Starting IAXProxy   /usr/sbin/iaxproxy"
+      /usr/sbin/iaxproxy
+   fi
+}
+
+iaxproxy_stop() {
+    # If there is no PID file, ignore this request...
+    if [ -r /var/run/iaxproxy.pid ]; then
+      killall iaxproxy
+    fi
+}
+
+iaxproxy_restart() {
+   iaxproxy_stop
+   iaxproxy_start
+}
+
+case "$1" in
+   'start')
+      iaxproxy_start
+      ;;
+   'stop')
+      iaxproxy_stop
+      ;;
+   'restart')
+      iaxproxy_restart
+      ;;
+   *)
+      echo "usage $0 start|stop|restart" ;;
+esac
+

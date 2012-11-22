@@ -1,0 +1,26 @@
+#!/sbin/runscript
+# $Id: rc.gentoo.iaxproxy 119302 2008-05-30 16:47:24Z mvanbaak $
+
+depend() {
+	need net logger
+}
+
+start() {
+	# Check if IAXProxy is already running.  If it is, then bug out, because
+	# starting safe_iaxproxy when IAXProxy is running is very bad.
+	VERSION=`${ASTSBINDIR}/iaxproxy -rx 'core show version'`
+	if [ "`echo $VERSION | cut -c 1-8`" = "IAXProxy" ]; then
+		echo "IAXProxy is already running.  $0 will exit now."
+		exit 1
+	fi
+
+	ebegin "Starting IAXProxy"
+	/usr/sbin/iaxproxy
+	eend $? "Failed to start IAXProxy"
+}
+
+stop() {
+	ebegin "Stopping IAXProxy"
+	kill $(cat /var/run/iaxproxy.pid)
+	eend $? "Failed to stop IAXProxy"
+}
