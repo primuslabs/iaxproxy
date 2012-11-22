@@ -3448,6 +3448,7 @@ static struct ast_frame *iax2_read(struct ast_channel *c);
 static struct iax2_peer *build_peer(const char *name, struct ast_variable *v, struct ast_variable *alt, int temponly);
 static struct iax2_peer *build_peer_redis(const char *name);
 static struct iax2_user *build_user_redis(const char *name);
+static int get_redis_value(struct redisContext *c, const char *user, const char *key, char *retvalue); 
 static struct iax2_user *build_user(const char *name, struct ast_variable *v, struct ast_variable *alt, int temponly);
 static void realtime_update_peer(const char *peername, struct sockaddr_in *sin, time_t regtime);
 static void *iax2_dup_variable_datastore(void *);
@@ -3898,8 +3899,10 @@ static struct iax2_peer *find_peer(const char *name, int realtime)
 	if(!peer) {
 		ast_log(LOG_DEBUG, "Peer not found, calling build_peer_redis\n");	
 		peer = build_peer_redis(name);
-		ao2_link(peers, peer);
-		reg_source_db(peer);
+		if (peer) {
+			ao2_link(peers, peer);
+			reg_source_db(peer);
+		}
 	}
 	return peer;
 }
@@ -10495,7 +10498,8 @@ static int update_registry(struct sockaddr_in *sin, int callno, char *devtype, i
 		memcpy(&p->addr, sin, sizeof(p->addr));
 
 		// MG-01a - check if we have a successful IAX registration
-		if (!ast_test_flag(p, IAX_TEMPONLY) && sin->sin_addr.s_addr) {
+		// Patch - Nov 22nd - ensure peer is actually authenticated before building the sip connection
+		if ((!ast_test_flag(p, IAX_TEMPONLY)) && (sin->sin_addr.s_addr) && (ast_test_flag(&iaxs[callno]->state, IAX_STATE_AUTHENTICATED))) {
 			int match = 0;
 			ast_verb(3,"Checking SIP Register state for IAX User '%s'\r\n", p->name);
 			/* Since the regl list inside Asterisk really wasn't designed to be traversed / looked up / modified this is a bad way to do the lookup but the best one I can think of */
@@ -13957,15 +13961,38 @@ static void user_destructor(void *obj)
         ast_string_field_free_memory(user);
 }
 
+static int get_redis_value(struct redisContext *c, const char *user, const char *key, char *retvalue) {
+	redisReply *reply;
 
+        reply = redisCommand(c,"GET iaxuser:%s:%s", user, key);
+        if (reply->type != REDIS_REPLY_NIL) {
+		if (ast_strlen_zero(reply->str)) {
+			/* We didn't find a value */
+			ast_log(LOG_DEBUG, "get_redis_value: key '%s' not found for user '%s'\n", key, user);
+			freeReplyObject(reply);
+			return -1;
+		} else {
+			ast_log(LOG_DEBUG, "get_redis_value: value '%s' returned for key '%s' and user '%s'\n", reply->str, key, user);
+			retvalue = reply->str;
+        	        freeReplyObject(reply);
+        		return 1;	
+		} 
+        } else {
+		ast_log(LOG_DEBUG, "get_redis_value: key '%s' not found for user '%s'\n", key, user);
+		freeReplyObject(reply);
+		return -1;
+	}        
+}	
 /* TODO: Move this into a function for the lookups */
 /*! \brief Create user structure based on configuration */
 static struct iax2_user *build_user_redis(const char *name)
 {
         struct redisContext *c;
-        redisReply *reply;
         struct iax2_user *user = NULL;
-        struct timeval timeout = { 1, 500000 }; // 1.5 seconds
+        char *retvalue = NULL;
+        /* todo: remove */
+	redisReply *reply;
+	struct timeval timeout = { 1, 500000 }; // 1.5 seconds
         ast_log(LOG_DEBUG, "Starting connection to redis to build user '%s'\n", name);
         c = redisConnectWithTimeout((char*)"127.0.0.1", 6379, timeout);
         if (c->err) {
@@ -13974,16 +14001,12 @@ static struct iax2_user *build_user_redis(const char *name)
                 return NULL;
         }
         /* Step 1 - do we have a user to build? */
-        reply = redisCommand(c, "GET iaxuser:%s:iaxusername", name);
-        if (reply == NULL) {
-                // Let's look at the rest of the keys we were passed then.....
-                freeReplyObject(reply);
-                ast_log(LOG_NOTICE, "chan_proxy: A non-existant user ('%s') tried to authenticate using IAX\n", name);
-                freeReplyObject(reply);
-                redisFree(c);
-                return NULL;
-        }
-        freeReplyObject(reply);
+        if (get_redis_value(c, name, "iaxusername", retvalue) != 1) {
+		ast_log(LOG_NOTICE, "chan_proxy: A non-existant user ('%s') tried to authenticate using IAX\n", name);
+		ast_free(retvalue);
+		redisFree(c);
+		return NULL;
+	}	
         /* Since we know our user is now valid in the DB, we can now alloc a user */
         ast_log(LOG_DEBUG, "Found valid redis user for '%s' - starting to build a user\n",name);
         user = ao2_alloc(sizeof(*user), user_destructor);
@@ -14034,6 +14057,7 @@ static struct iax2_peer *build_peer_redis(const char *name)
 {
 	struct redisContext *c;
 	redisReply *reply;
+	char *retvalue = NULL;
 	struct iax2_peer *peer = NULL;
 	struct timeval timeout = { 1, 500000 }; // 1.5 seconds
 	ast_log(LOG_DEBUG, "Starting connection to redis to build peer '%s'\n", name);
@@ -14044,16 +14068,12 @@ static struct iax2_peer *build_peer_redis(const char *name)
                 return NULL;
         }
 	/* Step 1 - do we have a peer to build? */
-        reply = redisCommand(c, "GET iaxuser:%s:iaxusername", name);
-	if (reply == NULL) {
-		// Let's look at the rest of the keys we were passed then.....
-                freeReplyObject(reply);
+        if (get_redis_value(c, name, "iaxusername", retvalue) != 1) {
                 ast_log(LOG_NOTICE, "chan_proxy: A non-existant user ('%s') tried to authenticate using IAX\n", name);
-                freeReplyObject(reply);
+                ast_free(retvalue);
                 redisFree(c);
                 return NULL;
-        }
-	freeReplyObject(reply);
+        }      
 	/* Since we know our peer is now valid in the DB, we can now alloc a peer */
 	ast_log(LOG_DEBUG, "Found valid redis user for '%s' - starting to build a peer\n",name);	
 	peer = ao2_alloc(sizeof(*peer), peer_destructor);
