@@ -10520,7 +10520,6 @@ static int update_registry(struct sockaddr_in *sin, int callno, char *devtype, i
 				peer->type |= SIP_TYPE_PEER;
 				ast_string_field_set(peer, context, "from-sip");
 				ast_string_field_set(peer, secret, p->sipPassword);
-//sip_password);
 				ast_string_field_set(peer, username, p->sipUsername);
 				ast_string_field_set(peer, fromdomain, p->sipDomain);	
 				ast_string_field_set(peer, uuid, p->uuid);

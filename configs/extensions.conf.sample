@@ -12,14 +12,9 @@ exten => _X.,1,NoOp(Call from SIP Server to IAX User)
 exten => _X.,n,Dial(IAX2/${EXTEN}/${EXTEN}, 120)
 exten => _X.,n,Hangup(16)
 
-[default]
+[from-iax]
 exten => _X.,1,NoOp(Call From IAX Customer);
 exten => _X.,n,SipAddHeader(P-Asserted-Identity: <sip:${CDR(accountcode)}@unlimitel.ca>)
 exten => _X.,n,Dial(SIP/${EXTEN}@${CDR(accountcode)},120)
-
-[from-iax]
-
-exten => _X.,1,NoOp(Call From IAX Customer);
-exten => _X.,2,Dial(SIP/${EXTEN}@${CDR(accountcode)},120)
 
 
