@@ -1,12 +1,12 @@
 /*
- * Asterisk -- An open source telephony toolkit.
+ * IAXProxy - an open source IAX2 to SIP Back-to-back Protocol Adapter (B2BPA) 
  *
- * Copyright (C) 1999 - 2006, Digium, Inc.
+ * Copyright (C) 2012 Primus Telecommunications, Inc.
  *
- * Mark Spencer <markster@digium.com>
+ * Matthew M. Gamble <mgamble@iaxproxy.org>
  *
  * See http://www.iaxproxy.org for more information about
- * the Asterisk project. Please do not directly contact
+ * the IAXProxy project. Please do not directly contact
  * any of the maintainers of this project for assistance;
  * the project provides a web site, mailing lists and IRC
  * channels for your use.
@@ -28,8 +28,7 @@
  *
  * \ingroup channel_drivers
  * 
- * \todo Make it work :-)
- */
+ * \todo  */
 
 /*** MODULEINFO
 	<use>crypto</use>
@@ -13958,6 +13957,7 @@ static struct iax2_user *build_user_redis(const char *name)
 {
         struct redisContext *c;
         struct iax2_user *user = NULL;
+	struct iax2_context *con = NULL;
         char *retvalue =  malloc(256);
 	struct timeval timeout = { 1, 500000 }; // 1.5 seconds
         c = redisConnectWithTimeout((char*)"127.0.0.1", 6379, timeout);
@@ -13994,8 +13994,10 @@ static struct iax2_user *build_user_redis(const char *name)
         ast_string_field_set(user, name, name);
 	ast_string_field_set(user, accountcode, name);
         user->prefs = prefs;
+        /* Fix the issue where IAX calls keep coming into default */
         user->capability = iax2_capability;
-
+	con = build_context("from-iax");
+        user->contexts = con;
         ast_clear_flag(user, IAX_HASCALLERID);
         ast_string_field_set(user, cid_name, name);
         ast_string_field_set(user, cid_num, name);
