@@ -360,7 +360,7 @@ all: _all
 	@echo " +               $(mK) install               +"  
 	@echo " +-------------------------------------------+"  
 
-_all: cleantest makeopts $(SUBDIRS) doc/core-en_US.xml
+_all: cleantest makeopts $(SUBDIRS) 
 
 makeopts: configure
 	@echo "****"
@@ -461,7 +461,6 @@ distclean: $(SUBDIRS_DIST_CLEAN) _clean
 	rm -rf autom4te.cache
 	rm -f include/iaxproxy/autoconfig.h
 	rm -f include/iaxproxy/buildopts.h
-	rm -rf doc/api
 	rm -f build_tools/menuselect-deps
 
 datafiles: _all
@@ -470,29 +469,6 @@ datafiles: _all
 # webvoicemail?  There are portions here that *could* be customized but might also be
 # improved a lot.  I'll put it here for now.
 	$(MAKE) -C sounds install
-
-doc/core-en_US.xml: $(foreach dir,$(MOD_SUBDIRS),$(shell $(GREP) -l "language=\"en_US\"" $(dir)/*.c $(dir)/*.cc 2>/dev/null))
-	@printf "Building Documentation For: "
-	@echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > $@
-	@echo "<!DOCTYPE docs SYSTEM \"appdocsxml.dtd\">" >> $@
-	@echo "<docs xmlns:xi=\"http://www.w3.org/2001/XInclude\">" >> $@
-	@for x in $(MOD_SUBDIRS); do \
-		printf "$$x " ; \
-		for i in $$x/*.c; do \
-			$(AWK) -f build_tools/get_documentation $$i >> $@ ; \
-		done ; \
-	done
-	@echo
-	@echo "</docs>" >> $@
-
-validate-docs: doc/core-en_US.xml
-ifeq ($(XMLSTARLET),:)
-	@echo "---------------------------------------------------------------"
-	@echo "--- Please install xmlstarlet to validate the documentation ---"
-	@echo "---------------------------------------------------------------"
-else
-	$(XMLSTARLET) val -d doc/appdocsxml.dtd $<
-endif
 
 update: 
 	@if [ -d .svn ]; then \
@@ -537,17 +513,12 @@ bininstall: _all installdirs $(SUBDIRS_INSTALL)
 	if [ -n "$(OLDHEADERS)" ]; then \
 		rm -f $(addprefix $(DESTDIR)$(ASTHEADERDIR)/,$(OLDHEADERS)) ;\
 	fi
-	mkdir -p $(DESTDIR)$(ASTDATADIR)/documentation
-	mkdir -p $(DESTDIR)$(ASTDATADIR)/documentation/thirdparty
 	mkdir -p $(DESTDIR)$(ASTLOGDIR)/cdr-csv
 	mkdir -p $(DESTDIR)$(ASTLOGDIR)/cdr-custom
 	mkdir -p $(DESTDIR)$(ASTDATADIR)/keys
 	mkdir -p $(DESTDIR)$(ASTMANDIR)/man8
-	$(INSTALL) -m 644 doc/core-*.xml $(DESTDIR)$(ASTDATADIR)/documentation
-	$(INSTALL) -m 644 doc/appdocsxml.dtd $(DESTDIR)$(ASTDATADIR)/documentation
 	$(INSTALL) -m 644 keys/iaxtel.pub $(DESTDIR)$(ASTDATADIR)/keys
 	$(INSTALL) -m 644 keys/freeworlddialup.pub $(DESTDIR)$(ASTDATADIR)/keys
-	$(INSTALL) -m 644 doc/iaxproxy.8 $(DESTDIR)$(ASTMANDIR)/man8
 	$(INSTALL) -m 644 contrib/scripts/astgenkey.8 $(DESTDIR)$(ASTMANDIR)/man8
 	$(INSTALL) -m 644 contrib/scripts/autosupport.8 $(DESTDIR)$(ASTMANDIR)/man8
 	$(INSTALL) -m 644 contrib/scripts/safe_iaxproxy.8 $(DESTDIR)$(ASTMANDIR)/man8
@@ -598,15 +569,6 @@ install: badshell datafiles bininstall
 	@echo " +                                           +"
 	@echo " +               $(mK) samples               +"
 	@echo " +                                           +"
-	@echo " +-----------------  or ---------------------+"
-	@echo " +                                           +"
-	@echo " + You can go ahead and install the iaxproxy +"
-	@echo " + program documentation now or later run:   +"
-	@echo " +                                           +"
-	@echo " +              $(mK) progdocs               +"
-	@echo " +                                           +"
-	@echo " + **Note** This requires that you have      +"
-	@echo " + doxygen installed on your local system    +"
 	@echo " +-------------------------------------------+"
 	@$(MAKE) -s oldmodcheck
 
@@ -903,7 +865,6 @@ menuselect-tree: $(foreach dir,$(filter-out main,$(MOD_SUBDIRS)),$(wildcard $(di
 .PHONY: dont-optimize
 .PHONY: badshell
 .PHONY: installdirs
-.PHONY: validate-docs
 .PHONY: _clean
 .PHONY: $(SUBDIRS_INSTALL)
 .PHONY: $(SUBDIRS_DIST_CLEAN)
