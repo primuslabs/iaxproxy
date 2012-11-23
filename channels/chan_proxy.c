@@ -3897,7 +3897,6 @@ static struct iax2_peer *find_peer(const char *name, int realtime)
 
 	/* Now go for realtime if applicable */
 	if(!peer) {
-		ast_log(LOG_DEBUG, "Peer not found, calling build_peer_redis\n");	
 		peer = build_peer_redis(name);
 		if (peer) {
 			ao2_link(peers, peer);
@@ -3909,14 +3908,12 @@ static struct iax2_peer *find_peer(const char *name, int realtime)
 
 static struct iax2_peer *peer_ref(struct iax2_peer *peer)
 {
-	ast_log(LOG_DEBUG, "peer_ref called for iax2_peer '%s'\n", peer->name);
 	ao2_ref(peer, +1);
 	return peer;
 }
 
 static inline struct iax2_peer *peer_unref(struct iax2_peer *peer)
 {
-	ast_log(LOG_DEBUG, "peer_unref called for iax2_peer '%s'\n", peer->name);
 	ao2_ref(peer, -1);
 	return NULL;
 }
@@ -3931,7 +3928,6 @@ static struct iax2_user *find_user(const char *name)
 	user = ao2_find(users, &tmp_user, OBJ_POINTER);
 	/* Now go for realtime if applicable */
 	if (!user) {
-		ast_log(LOG_DEBUG, "User not found, calling build_user_redis\n");
 		user = build_user_redis(name);
 	}
 	return user;
@@ -3953,18 +3949,15 @@ static int iax2_getpeername(struct sockaddr_in sin, char *host, int len)
 	struct iax2_peer *peer = NULL;
 	int res = 0;
 	struct ao2_iterator i;
-	ast_log(LOG_DEBUG, "iax2_getpeername called\n");
 	i = ao2_iterator_init(peers, 0);
 	while ((peer = ao2_iterator_next(&i))) {
 		if ((peer->addr.sin_addr.s_addr == sin.sin_addr.s_addr) &&
 		    (peer->addr.sin_port == sin.sin_port)) {
 			ast_copy_string(host, peer->name, len);
-			ast_log(LOG_DEBUG, "calling peer_unref for peer '%s' inside iax2_getpeername\n", peer->name);
 			peer_unref(peer);
 			res = 1;
 			break;
 		}
-		ast_log(LOG_DEBUG, "calling peer_unref second time for peer '%s' inside iax2_getpeername\n", peer->name);
 		peer_unref(peer);
 	}
 	ao2_iterator_destroy(&i);
@@ -3973,7 +3966,6 @@ static int iax2_getpeername(struct sockaddr_in sin, char *host, int len)
 		peer = realtime_peer(NULL, &sin);
 		if (peer) {
 			ast_copy_string(host, peer->name, len);
-			ast_log(LOG_DEBUG, "calling peer_unref third time for peer '%s' inside iax2_getpeername\n", peer->name);
 			peer_unref(peer);
 			res = 1;
 		}
@@ -5763,11 +5755,9 @@ static char *complete_iax2_peers(const char *line, const char *word, int pos, in
 		if (!strncasecmp(peer->name, word, wordlen) && ++which > state
 			&& (!flags || ast_test_flag(peer, flags))) {
 			res = ast_strdup(peer->name);
-			ast_log(LOG_DEBUG, "peer_unref called for peer '%s' inside complete_iax2_peers 1\n", peer->name);
 			peer_unref(peer);
 			break;
 		}
-		ast_log(LOG_DEBUG, "peer_unref called for peer '%s' inside complete_iax2_peers 2\n", peer->name);
 		peer_unref(peer);
 	}
 	ao2_iterator_destroy(&i);
@@ -6294,7 +6284,6 @@ static struct iax2_peer *realtime_peer(const char *peername, struct sockaddr_in 
 			if (strcasecmp(tmp->value, "friend") &&
 			    strcasecmp(tmp->value, "peer")) {
 				/* Whoops, we weren't supposed to exist! */
-				ast_log(LOG_DEBUG, "Peer '%s' wasn't supposed to exist - calling peer_unref\n", peer->name);
 				peer = peer_unref(peer);
 				break;
 			} 
@@ -6321,13 +6310,11 @@ static struct iax2_peer *realtime_peer(const char *peername, struct sockaddr_in 
  			if (peer->expire > -1) {
  				if (!ast_sched_thread_del(sched, peer->expire)) {
  					peer->expire = -1;
- 					ast_log(LOG_DEBUG, "Peer '%s' has expired - calling peer_unref\n", peer->name);
 					peer_unref(peer);
  				}
  			}
  			peer->expire = iax2_sched_add(sched, (global_rtautoclear) * 1000, expire_registry, peer_ref(peer));
  			if (peer->expire == -1) {
- 				ast_log(LOG_DEBUG, "Peer '%s' has expired (second case)- calling peer_unref\n", peer->name);
 				peer_unref(peer);
 			}
 		}
@@ -6545,7 +6532,6 @@ static int create_addr(const char *peername, struct ast_channel *c, struct socka
 
 return_unref:
 	peer_unref(peer);
-	ast_log(LOG_DEBUG, "create_addr inside the return_unref block for peer '%s'\n", peername);	
 	return res;
 }
 
@@ -6734,7 +6720,6 @@ static void requirecalltoken_mark_auto(const char *name, int subclass)
 	}
 
 	if (peer) {
-		ast_log(LOG_DEBUG, "requirecalltoken_mark_auto calling peer_unref for peer '%s'\n", peer->name);
 		peer_unref(peer);
 	}
 	if (user) {
@@ -7543,11 +7528,9 @@ static int iax2_getpeertrunk(struct sockaddr_in sin)
 		if ((peer->addr.sin_addr.s_addr == sin.sin_addr.s_addr) &&
 		    (peer->addr.sin_port == sin.sin_port)) {
 			res = ast_test_flag(peer, IAX_TRUNK);
-			ast_log(LOG_DEBUG, "iax2_getpeertrunk called peer_unref for peer '%s'\n", peer->name);
 			peer_unref(peer);
 			break;
 		}
-		ast_log(LOG_DEBUG, "iax2_getpeertrunk called peer_unref for peer '%s' second time\n", peer->name);
 		peer_unref(peer);
 	}
 	ao2_iterator_destroy(&i);
@@ -8721,11 +8704,9 @@ static char *complete_iax2_unregister(const char *line, const char *word, int po
 			if (!strncasecmp(p->name, word, wordlen) && 
 				++which > state && p->expire > 0) {
 				res = ast_strdup(p->name);
-				ast_log(LOG_DEBUG, "complete_iax2_unregister called peer_unref for peer '%s'\n", p->name);
 				peer_unref(p);
 				break;
 			}
-			ast_log(LOG_DEBUG, "complete_iax2_unregister called peer_unref at end for peer '%s'\n", p->name);
 			peer_unref(p);
 		}
 		ao2_iterator_destroy(&i);
@@ -9843,7 +9824,6 @@ return_unref:
 	}
 
 	if (p) {
-		ast_log(LOG_DEBUG, "return_unref called inside register_verify to peer_unref for peer '%s'\n", p->name);
 		peer_unref(p);
 	}
 	return res;
@@ -9932,7 +9912,6 @@ static int authenticate_reply(struct chan_iax2_pvt *p, struct sockaddr_in *sin, 
 	const char *peer_name = ast_strdupa(p->peer);
 	peer = build_peer_redis(peer_name);
 	res = authenticate(p->challenge, peer->secret,peer->outkey, authmethods, &ied, sin, p);
-        ast_log(LOG_DEBUG, "authenticate_reply called peer_unref for peer '%s'\n", peer->name);
 	peer_unref(peer);
 	return res;
 
@@ -10255,7 +10234,6 @@ static void unlink_peer(struct iax2_peer *peer)
 	if (peer->expire > -1) {
 		if (!ast_sched_thread_del(sched, peer->expire)) {
 			peer->expire = -1;
-			ast_log(LOG_DEBUG, "unlink_peer called peer_unref for peer '%s'\n", peer->name);
 			peer_unref(peer);
 		}
 	}
@@ -10263,7 +10241,6 @@ static void unlink_peer(struct iax2_peer *peer)
 	if (peer->pokeexpire > -1) {
 		if (!ast_sched_thread_del(sched, peer->pokeexpire)) {
 			peer->pokeexpire = -1;
-			ast_log(LOG_DEBUG, "unlink_peer pokeexpire called peer_unref for peer '%s'\n", peer->name);
 			peer_unref(peer);
 		}
 	}
@@ -10372,14 +10349,12 @@ static void reg_source_db(struct iax2_peer *p)
  					if (p->expire > -1) {
  						if (!ast_sched_thread_del(sched, p->expire)) {
  							p->expire = -1;
- 							ast_log(LOG_DEBUG, "reg_source_db calling peer_unref for peer '%s'\n", p->name);
 							peer_unref(p);
  						}
  					}
   					ast_devstate_changed(AST_DEVICE_UNKNOWN, "IAX2/%s", p->name); /* Activate notification */
  					p->expire = iax2_sched_add(sched, (p->expiry + 10) * 1000, expire_registry, peer_ref(p));
  					if (p->expire == -1) {
- 						ast_log(LOG_DEBUG, "reg_source_db calling peer_unref for peer '%s' due to expire being -1\n", p->name);
 						peer_unref(p);
 					}
 					if (iax2_regfunk)
@@ -10529,7 +10504,6 @@ static int update_registry(struct sockaddr_in *sin, int callno, char *devtype, i
 				//Free the resournce
 				ast_free(sip_reg_string);	
 				// Now build a basic peer for the reg so we can make / receive calls
-				ast_verb(3,"Building SIP Peer for '%s'\r\n", p->name);
 				struct ast_flags peerflags[2] = {{(0)}};
 				struct sip_peer *peer = NULL;		
         	         	struct ast_flags mask[2] = {{(0)}};
@@ -10551,24 +10525,25 @@ static int update_registry(struct sockaddr_in *sin, int callno, char *devtype, i
 				ast_string_field_set(peer, username, p->sipUsername);
 				ast_string_field_set(peer, fromdomain, p->sipDomain);	
 				ast_string_field_set(peer, uuid, p->uuid);
+				ast_string_field_set(peer, tohost, p->sipDomain);
+                                ast_copy_string(peer->name, p->sipUsername, sizeof(peer->name));
+                                ast_set_flag(&peer->flags[1], SIP_PAGE2_HAVEPEERCONTEXT);
+                                peer->addr.sin_port = htons(STANDARD_SIP_PORT);
+                                peer->host_dynamic = FALSE;
+                                peer->call_limit = 5;
+
 				/* Setup our OBP... OBP, ya you know me. */
 				char *proxyname;
-                                proxyname = ast_strdupa(p->sipProxy);
+                               	proxyname = ast_strdupa(p->sipProxy);
 				peer->outboundproxy = proxy_allocate(proxyname, "5060", 1);
-				ast_copy_string(peer->name, p->sipUsername, sizeof(peer->name));
-				//sip_username);
-				ast_set_flag(&peer->flags[1], SIP_PAGE2_HAVEPEERCONTEXT);
-				peer->addr.sin_port = htons(STANDARD_SIP_PORT);
-				peer->host_dynamic = FALSE;
-				peer->call_limit = 5;
-				ast_string_field_set(peer, tohost, p->sipDomain);
 				/* Fix peer address */
 				/* if it's actually an IP address and not a name, there's no need for a managed lookup */
         			if (!inet_aton(p->sipProxy, &peer->addr.sin_addr)) {
 					if (ast_get_ip_or_srv(&peer->addr, p->sipProxy, sip_cfg.srvlookup ? "_sip._udp" : NULL) < 0) {
-						ast_log(LOG_WARNING, "Unable to locate host '%s'\n", p->sipProxy);
+						ast_log(LOG_WARNING, "Unable to locate host '%s' - Calls for IAX User '%s' *WILL* fail\n", p->sipProxy, p->name);
 					}
 				}
+				//ast_free(proxyname);
 				ast_copy_flags(&peer->flags[0], &peerflags[0], mask[0].flags);
 	       	 		ast_copy_flags(&peer->flags[1], &peerflags[1], mask[1].flags);
 				peer->the_mark = 0;
@@ -10594,7 +10569,6 @@ static int update_registry(struct sockaddr_in *sin, int callno, char *devtype, i
 			register_peer_exten(p, 0);
 			ast_db_del("IAX/Registry", p->name);
 			ast_devstate_changed(AST_DEVICE_UNAVAILABLE, "IAX2/%s", p->name); /* Activate notification */
-			ast_log(LOG_DEBUG, "IAX2 Unregistration Event - Add SIP Unregister here\n");
 		}
 		/* Update the host */
 		/* Verify that the host is really there */
@@ -10618,7 +10592,6 @@ static int update_registry(struct sockaddr_in *sin, int callno, char *devtype, i
 	if (p->expire > -1) {
 		if (!ast_sched_thread_del(sched, p->expire)) {
 			p->expire = -1;
-			ast_log(LOG_DEBUG, "peer_unref called because peer expire for peer '%s'\n", p->name);
 			peer_unref(p);
 		}
 	}
@@ -10639,7 +10612,6 @@ static int update_registry(struct sockaddr_in *sin, int callno, char *devtype, i
 	if (p->expiry && sin->sin_addr.s_addr) {
 		p->expire = iax2_sched_add(sched, (p->expiry + 10) * 1000, expire_registry, peer_ref(p));
 		if (p->expire == -1) {
-			ast_log(LOG_DEBUG, "peer_unref called because expire == -1 for peer '%s'\n", p->name);
 			peer_unref(p);
 		}
 	}
@@ -10692,7 +10664,6 @@ static int update_registry(struct sockaddr_in *sin, int callno, char *devtype, i
 	res = 0;
 
 return_unref:
-	ast_log(LOG_DEBUG, "update_registry - peer_unref called for peer '%s' in return_unref\n", p->name);	
 	peer_unref(p);
 
 	return res ? res : send_command_final(iaxs[callno], AST_FRAME_IAX, IAX_COMMAND_REGACK, 0, ied.buf, ied.pos, -1);
@@ -10740,7 +10711,6 @@ static int registry_authrequest(int callno)
 
 return_unref:
 	if (p) {
-		ast_log(LOG_DEBUG, "registry_authrequest - peer_unref called for peer '%s' in return_unref\n", p->name);
 		peer_unref(p);
 	}
 
@@ -13968,17 +13938,16 @@ static int get_redis_value(struct redisContext *c, const char *user, const char 
         if (reply->type != REDIS_REPLY_NIL) {
 		if (ast_strlen_zero(reply->str)) {
 			/* We didn't find a value */
-			ast_log(LOG_DEBUG, "get_redis_value: key '%s' not found for user '%s'\n", key, user);
 			freeReplyObject(reply);
 			return -1;
 		} else {
-			ast_log(LOG_DEBUG, "get_redis_value: value '%s' returned for key '%s' and user '%s'\n", reply->str, key, user);
-			retvalue = reply->str;
-        	        freeReplyObject(reply);
+	//		memcpy(retvalue, reply->str, sizeof(retvalue));		
+        //		retvalue = ast_strdupa(reply->str);
+			strcpy(retvalue, reply->str);
+		        freeReplyObject(reply);
         		return 1;	
 		} 
         } else {
-		ast_log(LOG_DEBUG, "get_redis_value: key '%s' not found for user '%s'\n", key, user);
 		freeReplyObject(reply);
 		return -1;
 	}        
@@ -13989,11 +13958,8 @@ static struct iax2_user *build_user_redis(const char *name)
 {
         struct redisContext *c;
         struct iax2_user *user = NULL;
-        char *retvalue = NULL;
-        /* todo: remove */
-	redisReply *reply;
+        char *retvalue =  malloc(256);
 	struct timeval timeout = { 1, 500000 }; // 1.5 seconds
-        ast_log(LOG_DEBUG, "Starting connection to redis to build user '%s'\n", name);
         c = redisConnectWithTimeout((char*)"127.0.0.1", 6379, timeout);
         if (c->err) {
                 ast_log(LOG_NOTICE,"Could not connect to RedisDB - IAX Authentication will fail :-(  Connection error: %s\n", c->errstr);
@@ -14008,7 +13974,6 @@ static struct iax2_user *build_user_redis(const char *name)
 		return NULL;
 	}	
         /* Since we know our user is now valid in the DB, we can now alloc a user */
-        ast_log(LOG_DEBUG, "Found valid redis user for '%s' - starting to build a user\n",name);
         user = ao2_alloc(sizeof(*user), user_destructor);
         /* Start by setting sane defaults for all the user values */
         if (ast_string_field_init(user, 32)) {
@@ -14018,18 +13983,14 @@ static struct iax2_user *build_user_redis(const char *name)
         user->encmethods = iax2_encryption;
         user->adsi = adsi;
         /* Get the secret from redis reply->str */
-        ast_log(LOG_DEBUG, "Getting user '%s' from redis....\n", name);
-        reply = redisCommand(c,"GET iaxuser:%s:iaxpassword", name);
-        if (reply == NULL) {
-                // Let's look at the rest of the keys we were passed then.....
-                freeReplyObject(reply);
-                ast_log(LOG_NOTICE, "chan_proxy: User ('%s') existed in the DB but didn't have an iaxpassword?  How can this be?\n", name);
-                freeReplyObject(reply);
+	if (get_redis_value(c, name, "iaxpassword", retvalue) != 1) {
+                ast_log(LOG_NOTICE, "chan_proxy: IAX User ('%s') does not have a password - aborting\n", name);
+                ast_free(retvalue);
                 redisFree(c);
                 return NULL;
-        }
-        ast_string_field_set(user, secret, reply->str);
-        freeReplyObject(reply);
+        } else {
+		ast_string_field_set(user, secret, retvalue);
+	}
         ast_string_field_set(user, name, name);
 	ast_string_field_set(user, accountcode, name);
         user->prefs = prefs;
@@ -14049,18 +14010,18 @@ static struct iax2_user *build_user_redis(const char *name)
         user->calltoken_required = CALLTOKEN_NO;
         user->authmethods = IAX_AUTH_MD5 | IAX_AUTH_PLAINTEXT;
         ast_clear_flag(user, IAX_DELME);
-        /* Get the SIP Values from Redis */
+	/* Only you can prevent memory leaks */
+	ast_free(retvalue);
+	redisFree(c);	
 	return user;
 }
 /*! \brief Create peer structure based on configuration */
 static struct iax2_peer *build_peer_redis(const char *name)
 {
 	struct redisContext *c;
-	redisReply *reply;
-	char *retvalue = NULL;
+	char *retvalue =  malloc(256);
 	struct iax2_peer *peer = NULL;
 	struct timeval timeout = { 1, 500000 }; // 1.5 seconds
-	ast_log(LOG_DEBUG, "Starting connection to redis to build peer '%s'\n", name);
 	c = redisConnectWithTimeout((char*)"127.0.0.1", 6379, timeout);
         if (c->err) {
                 ast_log(LOG_NOTICE,"Could not connect to RedisDB - IAX Authentication will fail :-(  Connection error: %s\n", c->errstr);
@@ -14075,7 +14036,6 @@ static struct iax2_peer *build_peer_redis(const char *name)
                 return NULL;
         }      
 	/* Since we know our peer is now valid in the DB, we can now alloc a peer */
-	ast_log(LOG_DEBUG, "Found valid redis user for '%s' - starting to build a peer\n",name);	
 	peer = ao2_alloc(sizeof(*peer), peer_destructor);
 	/* Start by setting sane defaults for all the peer values */
 	peer->expire = -1;
@@ -14088,18 +14048,14 @@ static struct iax2_peer *build_peer_redis(const char *name)
 	peer->encmethods = iax2_encryption;
 	peer->adsi = adsi;
 	/* Get the secret from redis reply->str */
-	ast_log(LOG_DEBUG, "Getting user '%s' from redis....\n", name);	
-	reply = redisCommand(c,"GET iaxuser:%s:iaxpassword", name);
-	if (reply == NULL) {
-                // Let's look at the rest of the keys we were passed then.....
-                freeReplyObject(reply);
-                ast_log(LOG_NOTICE, "chan_proxy: User ('%s') existed in the DB but didn't have an iaxpassword?  How can this be?\n", name);
-                freeReplyObject(reply);
+        if (get_redis_value(c, name, "iaxpassword", retvalue) != 1) {
+                ast_log(LOG_NOTICE, "chan_proxy: IAX User ('%s') does not have a password - aborting\n", name);
+                ast_free(retvalue);
                 redisFree(c);
                 return NULL;
-        }
-	ast_string_field_set(peer, secret, reply->str);
-	freeReplyObject(reply);
+        } else {
+                ast_string_field_set(peer, secret, retvalue);
+        }	
 	ast_string_field_set(peer, name, name);
 	peer->addr.sin_port = htons(IAX_DEFAULT_PORTNO);
 	peer->expiry = min_reg_expire;
@@ -14138,88 +14094,61 @@ static struct iax2_peer *build_peer_redis(const char *name)
 	ast_clear_flag(peer, IAX_DELME);	
 	peer->addr.sin_family = AF_INET;
 	/* Get the SIP Values from Redis */
-        reply = redisCommand(c,"GET iaxuser:%s:allowedcountries", name);
-        if (reply == NULL) {
-                // Let's look at the rest of the keys we were passed then.....
-                freeReplyObject(reply);
-                ast_log(LOG_NOTICE, "chan_proxy: User ('%s') existed in the DB but didn't have allowedcountries set - skipping\n", name);
-                freeReplyObject(reply);
-                redisFree(c);
-        }
-        ast_string_field_set(peer, allowedcountries, reply->str);
-        freeReplyObject(reply);
-
-        reply = redisCommand(c,"GET iaxuser:%s:sipusername", name);
-        if (reply == NULL) {
-                // Let's look at the rest of the keys we were passed then.....
-                freeReplyObject(reply);
-                ast_log(LOG_NOTICE, "chan_proxy: User ('%s') existed in the DB but didn't have an sip username - how can this be?\n", name);
-                freeReplyObject(reply);
+        if (get_redis_value(c, name, "sipusername", retvalue) != 1) {
+                ast_log(LOG_NOTICE, "chan_proxy: IAX User ('%s') does not have a sipusername - aborting\n", name);
+                ast_free(retvalue);
                 redisFree(c);
                 return NULL;
+        } else {
+                ast_string_field_set(peer, sipUsername, retvalue);
         }
-	ast_string_field_set(peer,sipUsername, reply->str);
-	freeReplyObject(reply);
-
-        reply = redisCommand(c,"GET iaxuser:%s:sippassword", name);
-        if (reply == NULL) {
-                // Let's look at the rest of the keys we were passed then.....
-                freeReplyObject(reply);
-                ast_log(LOG_NOTICE, "chan_proxy: User ('%s') existed in the DB but didn't have an sip password?  How can this be?\n", name);
-                freeReplyObject(reply);
+ 
+        if (get_redis_value(c, name, "sippassword", retvalue) != 1) {
+                ast_log(LOG_NOTICE, "chan_proxy: IAX User ('%s') does not have a sippassword - aborting\n", name);
+                ast_free(retvalue);
                 redisFree(c);
                 return NULL;
+        } else {
+                ast_string_field_set(peer, sipPassword, retvalue);
         }
-        ast_string_field_set(peer,sipPassword, reply->str);
-        freeReplyObject(reply);
-
-        reply = redisCommand(c,"GET iaxuser:%s:sipauthuser", name);
-        if (reply == NULL) {
-                // Let's look at the rest of the keys we were passed then.....
-                freeReplyObject(reply);
-                ast_log(LOG_NOTICE, "chan_proxy: User ('%s') existed in the DB but didn't have an sip auth user - How can this be?\n", name);
-                freeReplyObject(reply);
+	if (get_redis_value(c, name, "sipauthuser", retvalue) != 1) {
+		ast_log(LOG_NOTICE, "chan_proxy: IAX User ('%s') does not have a sipauthusername - using sip username\n", name);
+		ast_string_field_set(peer, sipAuthUser, peer->sipUsername);
+	} else {
+		ast_string_field_set(peer, sipAuthUser, retvalue);
+	}
+	if (get_redis_value(c, name, "sipdomain", retvalue) != 1) {
+                ast_log(LOG_NOTICE, "chan_proxy: IAX User ('%s') does not have a sipdomain - aborting\n", name);
+                ast_free(retvalue);
                 redisFree(c);
                 return NULL;
+        } else {
+                ast_string_field_set(peer, sipDomain, retvalue);
         }
-        ast_string_field_set(peer,sipAuthUser, reply->str);
-        freeReplyObject(reply);
-	
-        reply = redisCommand(c,"GET iaxuser:%s:sipdomain", name);
-        if (reply == NULL) {
-                // Let's look at the rest of the keys we were passed then.....
-                ast_log(LOG_NOTICE, "chan_proxy: User ('%s') existed in the DB but didn't have an sip domain - How can this be?\n", name);
-                freeReplyObject(reply);
+
+	if (get_redis_value(c, name, "sipproxy" , retvalue) != 1) {
+                ast_log(LOG_NOTICE, "chan_proxy: IAX User ('%s') does not have a sipproxy - ignoring\n", name);
+                ast_string_field_set(peer, sipProxy, "");
+        } else {
+                ast_string_field_set(peer, sipProxy, retvalue);
+        }
+
+	if (get_redis_value(c, name, "uuid", retvalue) != 1) {
+                ast_log(LOG_NOTICE, "chan_proxy: IAX User ('%s') does not have a uuid - aborting\n", name);
+                ast_free(retvalue);
                 redisFree(c);
                 return NULL;
+        } else {
+                ast_string_field_set(peer, uuid, retvalue);
         }
-	ast_string_field_set(peer,sipDomain, reply->str);
-        freeReplyObject(reply);
 
-        reply = redisCommand(c,"GET iaxuser:%s:sipproxy", name);
-        if (reply == NULL) {
-                // Let's look at the rest of the keys we were passed then.....
-                ast_log(LOG_NOTICE, "chan_proxy: User ('%s') existed in the DB but didn't have an sip proxy - How can this be?\n", name);
-                freeReplyObject(reply);
-                redisFree(c);
-                return NULL;
+	if (get_redis_value(c, name, "allowedcountries", retvalue) != 1) {
+                ast_log(LOG_NOTICE, "chan_proxy: IAX User ('%s') does not have allowedcountries set - ignoring\n", name);
+                ast_string_field_set(peer,allowedcountries, "");
+        } else {
+                ast_string_field_set(peer,allowedcountries, retvalue);
         }
-	ast_log(LOG_DEBUG, "chan_proxy: redis returned sip proxy '%s'\n", reply->str);
-        ast_string_field_set(peer,sipProxy, reply->str);
-        freeReplyObject(reply);
-
-	/* Get the peer UUID */
-	reply = redisCommand(c,"GET iaxuser:%s:uuid", name);
-        if (reply == NULL) {
-                // Let's look at the rest of the keys we were passed then.....
-                ast_log(LOG_NOTICE, "chan_proxy: User ('%s') existed in the DB but didn't have a UUID - How can this be?\n", name);
-                freeReplyObject(reply);
-                redisFree(c);
-                return NULL;
-        }
-        ast_string_field_set(peer,uuid, reply->str);
-        freeReplyObject(reply);
-
+	ast_free(retvalue);
 	redisFree(c);
 	return peer;
 }
@@ -18749,7 +18678,6 @@ static int find_by_name(void *obj, void *arg, void *data, int flags)
  */
 static struct sip_peer *sip_find_peer_uuid(const char *uuid) 
 {
-	ast_log(LOG_DEBUG, "sip_find_peer_uuid using uuid '%s' to find peer in sip_peers table\n", uuid);
 	struct sip_peer *p = NULL;
 	struct sip_peer *peer;
         struct ao2_iterator i;
@@ -18758,7 +18686,6 @@ static struct sip_peer *sip_find_peer_uuid(const char *uuid)
 		ao2_lock(peer);
 		if (!strcmp(peer->uuid, uuid)) {
 			p = peer;
-			ast_log(LOG_DEBUG, "sip_find_peer_uuid found a matching sip peer for uuid '%s'\n", uuid);
 		}	
                 ao2_unlock(peer);
                 unref_peer(peer, "toss iterator pointer");
