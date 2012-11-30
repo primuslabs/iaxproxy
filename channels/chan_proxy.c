@@ -3896,6 +3896,7 @@ static struct iax2_peer *find_peer(const char *name, int realtime)
 
 	/* Now go for realtime if applicable */
 	if(!peer) {
+		ast_log(LOG_DEBUG, "find_peer calling build_peer_redis for name '%s'\n", name);
 		peer = build_peer_redis(name);
 		if (peer) {
 			ao2_link(peers, peer);
@@ -9832,31 +9833,9 @@ static int authenticate(const char *challenge, const char *secret, const char *k
 {
 	int res = -1;
 	int x;
-	if (!ast_strlen_zero(keyn)) {
-		if (!(authmethods & IAX_AUTH_RSA)) {
-			if (ast_strlen_zero(secret)) 
-				ast_log(LOG_NOTICE, "Asked to authenticate to %s with an RSA key, but they don't allow RSA authentication\n", ast_inet_ntoa(sin->sin_addr));
-		} else if (ast_strlen_zero(challenge)) {
-			ast_log(LOG_NOTICE, "No challenge provided for RSA authentication to %s\n", ast_inet_ntoa(sin->sin_addr));
-		} else {
-			char sig[256];
-			struct ast_key *key;
-			key = ast_key_get(keyn, AST_KEY_PRIVATE);
-			if (!key) {
-				ast_log(LOG_NOTICE, "Unable to find private key '%s'\n", keyn);
-			} else {
-				if (ast_sign(key, (char*)challenge, sig)) {
-					ast_log(LOG_NOTICE, "Unable to sign challenge with key\n");
-					res = -1;
-				} else {
-					iax_ie_append_str(ied, IAX_IE_RSA_RESULT, sig);
-					res = 0;
-				}
-			}
-		}
-	} 
 	/* Fall back */
-	if (res && !ast_strlen_zero(secret)) {
+	ast_log(LOG_DEBUG, "authenticate called for peer '%s' supporting methods %d \n", ast_inet_ntoa(sin->sin_addr),  authmethods);
+	if (!ast_strlen_zero(secret)) {
 		if ((authmethods & IAX_AUTH_MD5) && !ast_strlen_zero(challenge)) {
 			struct MD5Context md5;
 			unsigned char digest[16];
@@ -9908,14 +9887,19 @@ static int authenticate_reply(struct chan_iax2_pvt *p, struct sockaddr_in *sin, 
 		p->encmethods = 0;
 
 	/* Build the peer from redis *hacked up RT support */
-	const char *peer_name = ast_strdupa(p->peer);
-	peer = build_peer_redis(peer_name);
-	res = authenticate(p->challenge, peer->secret,peer->outkey, authmethods, &ied, sin, p);
-	peer_unref(peer);
-	return res;
-
-	if (!res)
+//	const char *peer_name = ast_strdupa(p->peer);
+	peer = find_peer(ies->username, 1);
+	//peer = build_peer_redis(peer_name);
+	if (peer) {
+		res = authenticate(p->challenge, peer->secret,peer->outkey, authmethods, &ied, sin, p);
+		peer_unref(peer);
+		return res;
+	} else {
+		ast_log(LOG_DEBUG, "authenticate_reply: could not find a peer for '%s'\n", ies->username);
+	}
+	if (!res) {
 		res = send_command(p, AST_FRAME_IAX, IAX_COMMAND_AUTHREP, 0, ied.buf, ied.pos, -1);
+	}
 	return res;
 }
 
@@ -14031,7 +14015,7 @@ static struct iax2_peer *build_peer_redis(const char *name)
         }
 	/* Step 1 - do we have a peer to build? */
         if (get_redis_value(c, name, "iaxusername", retvalue) != 1) {
-                ast_log(LOG_NOTICE, "chan_proxy: A non-existant user ('%s') tried to authenticate using IAX\n", name);
+            	ast_log(LOG_NOTICE, "chan_proxy: A non-existant peer ('%s') tried to authenticate using IAX\n", name); 
                 ast_free(retvalue);
                 redisFree(c);
                 return NULL;
@@ -15824,9 +15808,9 @@ static int iax2_devicestate(void *data)
 	    (!p->maxms || ((p->lastms > -1) && (p->historicms <= p->maxms)))) {
 		/* Peer is registered, or have default IP address
 		   and a valid registration */
-		if (p->historicms == 0 || p->historicms <= p->maxms)
-			/* let the core figure out whether it is in use or not */
-			res = AST_DEVICE_UNKNOWN;	
+		//if (p->historicms == 0 || p->historicms <= p->maxms)
+		//	/* let the core figure out whether it is in use or not */
+		//	res = AST_DEVICE_UNKNOWN;	
 	} else {
 		ast_debug(3, "Peer is offline?\n");
 	}
